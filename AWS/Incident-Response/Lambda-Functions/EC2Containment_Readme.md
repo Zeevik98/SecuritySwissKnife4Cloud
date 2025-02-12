@@ -1,4 +1,4 @@
-Name: IR-Containment-Lambda
+Name: IR-Containment-Lambda for EC2
 
 Description:
 Automated incident response lambda that isolates potentially compromised EC2 instances, creates forensic snapshots, blocks malicious IPs at WAF/VPC level, and coordinates with investigation lambda.
