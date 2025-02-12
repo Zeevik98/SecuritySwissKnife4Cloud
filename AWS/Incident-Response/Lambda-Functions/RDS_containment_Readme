@@ -1,0 +1,44 @@
+##Overview
+Automated containment lambda for RDS instances during security incidents. This lambda performs immediate containment actions while preserving forensic evidence.
+Features
+
+##Creates encrypted snapshots of RDS instances
+Removes enhanced monitoring IAM role
+Modifies security group access
+Disables public accessibility
+Revokes problematic database users
+Logs all containment actions
+Notifies security team
+
+##Prerequisites
+Pre-configured isolation security group
+KMS key for snapshot encryption
+SNS topic for security notifications
+IAM permissions configured
+Appropriate database credentials stored in Secrets Manager
+
+##Lmabda execution role needed permissions:
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "rds:CreateDBSnapshot",
+                "rds:ModifyDBInstance",
+                "rds:RemoveRoleFromDBInstance",
+                "rds:DescribeDBInstances",
+                "ec2:UpdateSecurityGroupRuleDescriptions",
+                "ec2:RevokeSecurityGroupIngress",
+                "kms:Encrypt",
+                "kms:GenerateDataKey",
+                "secretsmanager:GetSecretValue",
+                "sns:Publish",
+                "iam:ListAttachedRolePolicies",
+                "iam:DetachRolePolicy"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
