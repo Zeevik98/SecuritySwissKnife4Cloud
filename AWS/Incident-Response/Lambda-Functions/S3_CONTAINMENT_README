@@ -1,17 +1,26 @@
 S3 Containment Lambda
 
 ##Features
-Blocks public access
-Enables versioning and MFA delete
-Implements object lock
-Revokes bucket policies
-Quarantines suspicious objects
-Logs all access attempts
+Document initial state (including roles/profiles)
+Remove bucket roles and policies
+Block public access
+Enable versioning and MFA delete
+Apply pre-created forensic policy
+Quarantine suspicious objects if needed
+Document actions and notify team
+
+##Prerequisites
+Pre-created forensic bucket policy
+Pre-created quarantine bucket
+Pre-created isolation IAM policies
+SNS topic for notifications
+KMS key for encryption
 
 ##Required Environment Variables
 CopySECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
 QUARANTINE_BUCKET=forensics-quarantine-bucket
 KMS_KEY_ID=arn:aws:kms:region:account:key/xxxxx
+FORENSIC_BUCKET_POLICY_ARN=arn:aws:iam::account:policy/forensic-bucket-policy
 
 ##Lmabda execution role needed permissions:
 {
