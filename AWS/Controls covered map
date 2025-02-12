@@ -1,6 +1,6 @@
 For your convenience I included  list of known frameworks and regulation controls  that are covered by this project:
 
-##NIST 800-53 Controls Coverage
+## NIST 800-53 Controls Coverage
 Incident Response (IR)
 
 IR-4 Incident Handling
@@ -64,7 +64,7 @@ AU-9(4): Access by subset of privileged users
 
 
 
-##SOC-2 Controls Coverage
+## SOC-2 Controls Coverage
 CC7.0: Common Criteria Related to Change Management
 
 CC7.2: Incident Response
@@ -117,7 +117,7 @@ Data encryption
 
 
 
-##GDPR Requirements Coverage
+## GDPR Requirements Coverage
 Article 32 - Security of Processing
 
 Technical Measures
