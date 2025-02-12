@@ -1,0 +1,78 @@
+For each Lambda in this directory there are needed parmeters needed to be passed in order for them to work properlly.
+Ensure that in any implmantation of this Lambda functions the following data is passe:
+##Containment:
+EC2 Containment Required Input:
+{
+    "instance_id": "i-1234567890abcdef0",  // Required
+    "vpc_id": "vpc-1234567890",            // Required for network isolation
+    "suspicious_ips": ["1.2.3.4"],         // Optional
+    "incident_type": "malware",            // Optional - helps with isolation strategy
+    "severity": "high"                     // Optional
+}
+
+ECS Containment Required Input:
+{
+    "cluster_name": "my-ecs-cluster",      // Required
+    "task_id": "task-1234567890",         // Required
+    "container_name": "my-container",      // Required
+    "vpc_id": "vpc-1234567890",           // Required for network isolation
+    "suspicious_ips": ["1.2.3.4"],         // Optional
+    "incident_type": "malware",            // Optional
+    "severity": "high"                     // Optional
+}
+
+EKS Containment Input
+{
+    "cluster_name": "my-eks-cluster",      // Required
+    "namespace": "default",                // Required
+    "pod_name": "compromised-pod",         // Required
+    "node_name": "ip-10-0-0-100.node",     // Optional
+    "suspicious_ips": ["1.2.3.4"],         // Optional
+    "isolation_namespace": "quarantine"     // Optional, default will be created if not provided
+}
+
+
+S3 Containment Input
+{
+    "bucket_name": "compromised-bucket",    // Required
+    "suspicious_prefix": "malware/",        // Optional
+    "suspicious_objects": [                 // Optional
+        "malware/file1.exe",
+        "suspicious/file2.dat"
+    ],
+    "quarantine_enabled": true             // Optional, defaults to true
+}
+
+IAM Containment Input
+{
+    "principal_type": "user",              // Required (user/role)
+    "principal_name": "compromised-user",   // Required
+    "access_key_ids": [                    // Optional
+        "AKIA1234567890",
+        "AKIA0987654321"
+    ],
+    "revoke_sessions": true               // Optional, defaults to true
+}
+
+RDS Containment Input
+{
+    "db_instance_identifier": "database-1", // Required
+    "suspicious_users": [                   // Optional
+        "suspicious_user1",
+        "suspicious_user2"
+    ],
+    "snapshot_before_action": true,         // Optional, defaults to true
+    "vpc_id": "vpc-1234567890"             // Required for network isolation
+}
+##Investigation:
+EC2 Investigation Lambda Required Input:
+{
+    "instance_id": "i-1234567890abcdef0"  // Required
+}
+
+ECS Investigation Lambda Required Input:
+{
+    "cluster_name": "my-ecs-cluster",      // Required
+    "task_id": "task-1234567890",         // Required
+    "container_name": "my-container"       // Required
+}
