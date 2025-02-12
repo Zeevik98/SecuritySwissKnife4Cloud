@@ -1,5 +1,5 @@
-For each Lambda in this directory there are needed parmeters needed to be passed in order for them to work properlly.
-Ensure that in any implmantation of this Lambda functions the following data is passe:
+For each Lambda in this directory there are needed parameters needed to be passed in order for them to work properly.
+Ensure that in any implementation of this Lambda functions the following data is passe:
 ##Containment:
 EC2 Containment Required Input:
 {
