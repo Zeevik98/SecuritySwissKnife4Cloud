@@ -1,0 +1,136 @@
+##Forensics Tools Installation Guide for ECS
+The following tools will be used by an automation lambda to gather the full forensics picture of an ECS container
+This guide is designed for linux/unix based containers. Separate guide for Windows containers will be uploaded in the future.
+These tools can be used manually or be gathered to a single investigation lambda(In the repo).
+
+##In order to use them as part of lambda the following environmental variables needed:
+FORENSICS_BUCKET=your-forensics-bucket-name
+SECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
+ECS_CLUSTER_NAME=your-ecs-cluster-name
+
+##Lambda execution role needed permissions:
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:DescribeContainerInstances",
+                "ecs:DescribeTasks",
+                "ecs:ListTasks",
+                "ecs:UpdateContainerInstancesState",
+                "ecs:ListContainerInstances",
+                "ec2:DescribeInstances",
+                "ssm:SendCommand",
+                "ssm:GetCommandInvocation",
+                "s3:PutObject",
+                "s3:PutObjectVersion",
+                "sns:Publish",
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:GenerateDataKey",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+List of tools:
+##Memory Analysis Tools
+Linux Memory Extractor (LiME)
+Purpose: Memory acquisition tool specifically for container memory analysis
+Usage: Creates memory dumps from running containers
+Key Features:
+
+Container-aware memory capture
+Minimal container impact
+Format compatibility with analysis tools
+Installation:
+# Add to Dockerfile or image build process
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    linux-headers-$(uname -r) \
+    git
+RUN git clone https://github.com/504ensicsLabs/LiME \
+    && cd LiME/src \
+    && make
+
+##Container Analysis Tools
+Sysdig
+Purpose: Container-specific system analysis
+Key Features:
+
+Container activity monitoring
+System calls tracking
+Network analysis
+File system monitoring
+Installation:
+# Debian/Ubuntu containers
+RUN apt-get update && apt-get install -y sysdig
+
+# CentOS/RHEL containers
+RUN yum install -y sysdig
+
+##Network Analysis Tools
+TCPDump
+Purpose: Container network analysis
+Key Features:
+
+Container network capture
+Traffic filtering
+Container port monitoring
+Installation:
+# Debian/Ubuntu containers
+RUN apt-get update && apt-get install -y tcpdump
+
+# CentOS/RHEL containers
+RUN yum install -y tcpdump
+
+##Container Introspection Tools
+ContainerD Debug Tools
+Purpose: Container runtime analysis
+Key Features:
+
+Container state examination
+Runtime debugging
+Process inspection
+Installation:
+# Debian/Ubuntu containers
+RUN apt-get update && apt-get install -y containerd
+
+# CentOS/RHEL containers
+RUN yum install -y containerd
+
+##File System Analysis Tools
+Sleuthkit
+Purpose: Container filesystem analysis
+Key Features:
+
+File system examination
+Deleted file recovery
+Timeline analysis
+Installation:
+# Debian/Ubuntu containers
+RUN apt-get update && apt-get install -y sleuthkit
+
+# CentOS/RHEL containers
+RUN yum install -y sleuthkit
+
+##Malware Analysis Tools
+YARA
+Purpose: Container malware detection
+Key Features:
+
+Pattern matching
+Binary analysis
+Custom rule support
+Installation:
+# Debian/Ubuntu containers
+RUN apt-get update && apt-get install -y yara
+
+# CentOS/RHEL containers
+RUN yum install -y epel-release && yum install -y yara
+
