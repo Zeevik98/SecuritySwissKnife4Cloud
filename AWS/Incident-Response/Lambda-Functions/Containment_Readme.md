@@ -56,6 +56,7 @@ ENVIRONMENT_VARIABLES = {
     'FORENSICS_BUCKET': 'forensics-bucket-name'
     ISOLATION_SECURITY_GROUP_ID=sg-xxxxx
     SECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
+    SNAPSHOT_KMS_KEY_ID : 'Key-ID'
 }
 
 
