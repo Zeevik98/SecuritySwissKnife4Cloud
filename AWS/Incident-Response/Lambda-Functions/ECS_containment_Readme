@@ -48,11 +48,4 @@ ISOLATION_SECURITY_GROUP_ID=sg-xxxxx
 SECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
 SNAPSHOT_KMS_KEY_ID=arn:aws:kms:region:account:key/xxxxx
 
-## Input Event Format
 
-```json
-{
-    "cluster_name": "ecs-cluster-name",
-    "task_id": "task-id",
-    "container_name": "container-name"
-}
