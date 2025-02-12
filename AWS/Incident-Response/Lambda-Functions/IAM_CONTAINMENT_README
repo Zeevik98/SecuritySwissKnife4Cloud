@@ -1,0 +1,34 @@
+##Features
+Invalidates access keys
+Removes IAM permissions
+Blocks console access
+Detaches all policies
+Removes from all groups
+Documents all recent actions
+
+##Required Environment Variables
+CopySECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
+FORENSICS_BUCKET=iam-forensics-bucket
+
+##Lambda execution role needed permissions:
+{
+    "Effect": "Allow",
+    "Action": [
+        "iam:DeleteAccessKey",
+        "iam:UpdateAccessKey",
+        "iam:DetachUserPolicy",
+        "iam:DetachGroupPolicy",
+        "iam:DetachRolePolicy",
+        "iam:RemoveUserFromGroup",
+        "iam:DeleteLoginProfile",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
+        "iam:ListAttachedGroupPolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListUserGroups",
+        "cloudtrail:LookupEvents",
+        "s3:PutObject",
+        "sns:Publish"
+    ],
+    "Resource": "*"
+}
