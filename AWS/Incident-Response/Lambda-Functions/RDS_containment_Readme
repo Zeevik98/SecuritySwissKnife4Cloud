@@ -1,8 +1,8 @@
 ##Overview
 Automated containment lambda for RDS instances during security incidents. This lambda performs immediate containment actions while preserving forensic evidence.
 Features
-
-##Creates encrypted snapshots of RDS instances
+##Containment process:
+Creates encrypted snapshots of RDS instances
 Removes enhanced monitoring IAM role
 Modifies security group access
 Disables public accessibility
@@ -41,4 +41,3 @@ Appropriate database credentials stored in Secrets Manager
         }
     ]
 }
-
