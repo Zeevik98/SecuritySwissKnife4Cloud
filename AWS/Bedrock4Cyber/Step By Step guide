@@ -1,0 +1,41 @@
+Step 1: Create Knowledge Base
+A.Navigate to AWS Console → Bedrock
+B.Select "Knowledge bases"
+C.Click "Create knowledge base"
+D.Name: "ForensicsAnalysis"
+E.Model: Claude
+F.Add base prompt from Part 2
+
+Step 2: Configure Data Sources
+A.Under "Data sources"
+B.Add S3 bucket containing forensics data
+C.Configure encryption settings:
+   *Select KMS key
+   *Enable in-transit encryption
+
+
+Step 3: Create Assistant
+A.Select "Assistants"
+B.Click "Create assistant"
+C.Configure:
+   *Name: "ForensicsTeam"
+   *Knowledge base: "ForensicsAnalysis"
+   *Model: Claude
+   *Enable response streaming
+
+
+
+Step 4: Configure SNS Integration
+A.Create SNS topic
+B.Enable encryption
+C.Add subscription for security team
+D.Configure message format:
+
+{
+    "subject": "Forensics Analysis Report - ${incident_id}",
+    "executiveSummary": "${summary}",
+    "riskLevel": "${risk}",
+    "recommendations": ["${actions}"],
+    "fullReportLocation": "s3://${bucket}/${path}"
+}
+
