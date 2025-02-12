@@ -1,0 +1,129 @@
+##Forensics Tools Installation Guide
+The following tools will be used by an automation lambda to gather the full foransics picture of an EC2 instance
+This guide is designed for linux\unix based systems.seprate guide for Windows will be uploaded in the future.
+
+List of tolls:
+##Memory Analysis Tools
+LiME (Linux Memory Extractor)
+Purpose: Memory acquisition tool specifically for Linux systems
+Usage: Creates memory dumps from live Linux systems
+Key Features:
+Minimal system impact
+Format compatibility with major analysis tools
+Kernel module-based acquisition
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y build-essential linux-headers-$(uname -r)
+git clone https://github.com/504ensicsLabs/LiME
+cd LiME/src
+make
+
+CentOS/RHEL:
+yum groupinstall -y "Development Tools"
+yum install -y kernel-devel
+git clone https://github.com/504ensicsLabs/LiME
+cd LiME/src
+make
+
+##Disk Analysis Tools
+Sleuthkit & Autopsy
+Purpose: Comprehensive disk and file system analysis
+Key Features:
+File system analysis
+Deleted file recovery
+Timeline analysis
+Hash filtering
+Keyword searching
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y sleuthkit autopsy
+
+CentOS/RHEL:
+yum install -y sleuthkit sleuthkit-tools
+
+
+DCFLdd
+Purpose: Enhanced version of dd with forensic features
+Key Features:
+Hash calculation during copy
+Status output
+Multiple outputs
+Split output
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y dcfldd
+
+CentOS/RHEL:
+yum install -y dcfldd
+
+##Network Analysis Tools
+Wireshark/TShark
+Purpose: Network protocol analyzer
+Key Features:
+Deep packet inspection
+Protocol analysis
+Traffic filtering
+Network stream reconstruction
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y wireshark-cli tshark
+
+CentOS/RHEL:
+yum install -y wireshark-cli
+
+
+TCPDump
+Purpose: Command-line packet analyzer
+Key Features:
+
+Live packet capture
+Traffic filtering
+Save captures to file
+
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y tcpdump
+
+CentOS/RHEL:
+yum install -y tcpdump
+
+##Malware Analysis Tools
+YARA
+Purpose: Pattern matching for malware identification
+Key Features:
+Custom rule creation
+Binary pattern matching
+String matching
+Multi-platform support
+
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y yara python3-yara
+
+CentOS/RHEL:
+yum install -y epel-release
+yum install -y yara python3-yara
+
+
+##File Analysis Tools
+Foremost(Deteact hidden\deleted files)
+Purpose: File carving and recovery
+Key Features:
+Header/footer analysis
+Multiple file type support
+Custom configuration
+
+
+Intallation:
+Debian/Ubuntu:
+apt-get install -y foremost 
+CentOS/RHEL:
+yum install -y foremost
+
+
