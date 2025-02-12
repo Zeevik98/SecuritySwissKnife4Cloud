@@ -1,0 +1,196 @@
+For your conviniance I included the entire list of knowen framworks and regulation that are coverd by this project:
+
+##NIST 800-53 Controls Coverage
+Incident Response (IR)
+
+IR-4 Incident Handling
+
+IR-4(1): Automated containment with EC2/ECS/EKS isolation
+IR-4(2): Dynamic reconfiguration through security group changes
+IR-4(3): Continuity of operations through ASG handling
+IR-4(4): Information correlation through unified reporting
+
+
+IR-5 Incident Monitoring
+
+IR-5(1): Automated tracking of containment actions
+IR-5(2): Automated forensic data collection
+IR-5(3): Integration with S3 for evidence storage
+
+
+IR-6 Incident Reporting
+
+IR-6(1): Automated alerts through SNS
+IR-6(2): Standard reporting format for all incidents
+
+
+
+System and Information Integrity (SI)
+
+SI-4 Information System Monitoring
+
+SI-4(2): Automated memory analysis
+SI-4(4): Network traffic monitoring
+SI-4(7): Automated response to suspicious activity
+SI-4(24): System-generated alerts
+
+
+SI-7 Software, Firmware, and Information Integrity
+
+SI-7(1): Integrity checks through YARA
+SI-7(2): Automated notifications of integrity violations
+
+
+
+Audit and Accountability (AU)
+
+AU-6 Audit Review, Analysis, and Reporting
+
+AU-6(1): Automated process integration
+AU-6(3): Correlations across different repositories
+
+
+AU-7 Audit Reduction and Report Generation
+
+AU-7(1): Automatic processing of audit data
+AU-7(2): Automatic report generation
+
+
+AU-9 Protection of Audit Information
+
+AU-9(2): Audit backup on separate system
+AU-9(3): Cryptographic protection
+AU-9(4): Access by subset of privileged users
+
+
+
+##SOC-2 Controls Coverage
+CC7.0: Common Criteria Related to Change Management
+
+CC7.2: Incident Response
+
+Detection of security events
+Automated containment procedures
+Evidence collection and preservation
+Integration with existing security tools
+
+
+CC7.3: Incident Resolution
+
+Standardized containment process
+Forensic investigation capabilities
+Documentation of incident timeline
+Evidence preservation
+
+
+CC7.4: Incident Communication
+
+Automated notification system
+Standardized reporting format
+Documentation requirements
+Stakeholder communication
+
+
+
+CC6.0: Common Criteria Related to Logical and Physical Access Controls
+
+CC6.1: Logical Access Security
+
+IAM credential management
+Access revocation
+System isolation
+Network segmentation
+
+
+CC6.7: Change Management
+
+System change logging
+Configuration monitoring
+Change documentation
+
+
+CC6.8: Data Integrity
+
+Evidence preservation
+Audit trail maintenance
+Data encryption
+
+
+
+##GDPR Requirements Coverage
+Article 32 - Security of Processing
+
+Technical Measures
+
+Encryption of forensic data
+Network isolation capabilities
+Access control implementation
+System monitoring
+
+
+Organizational Measures
+
+Incident response procedures
+Evidence handling processes
+Documentation requirements
+
+
+
+Article 33 - Notification of Personal Data Breach
+
+Documentation Requirements
+
+Automated evidence collection
+Timeline documentation
+Impact assessment data
+Response action logging
+
+
+Technical Requirements
+
+Breach detection capabilities
+Data collection for reporting
+Evidence preservation
+
+
+
+Article 30 - Records of Processing Activities
+
+Processing Records
+
+System activity logging
+Access attempt documentation
+Processing timeline recording
+
+
+Security Measures
+
+Access control implementation
+Data protection measures
+Security monitoring
+
+
+
+Article 25 - Data Protection by Design
+
+Technical Implementation
+
+Secure evidence handling
+Encryption by default
+Access limitations
+
+
+Organizational Implementation
+
+Standardized procedures
+Documentation requirements
+Role-based access control
+
+
+
+Each control includes:
+
+Automated implementation
+Documentation generation
+Evidence preservation
+Audit trail maintenance
