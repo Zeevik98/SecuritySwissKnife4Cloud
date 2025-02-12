@@ -3,7 +3,9 @@ The following tools will be used by an automation lambda to gather the full fora
 This guide is designed for linux\unix based systems.seprate guide for Windows will be uploaded in the future.
 
 This tools can be used manually or be gathered to a single investigation lambda(In the repo).
-
+In order to use them as part of lambda the following enviormental variables needed:
+FORENSICS_BUCKET=your-forensics-bucket-name
+SECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
 
 List of tolls:
 ##Memory Analysis Tools
