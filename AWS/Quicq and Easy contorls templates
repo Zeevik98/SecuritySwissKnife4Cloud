@@ -1,0 +1,150 @@
+This file is meant to ease the cyber expert workday by gaining a significant boost for the security posture by using simple security mechanisems templates and adjusting them to your own enviorment.
+
+Access Control Implementation [NIST AC-2, SOC-2 CC6.1, GDPR Article 32]
+MFA Enforcement
+# Using AWS CLI
+aws iam create-account-alias --account-alias "your-company"
+aws iam update-account-password-policy \
+    --require-numbers \
+    --require-symbols \
+    --require-uppercase-characters \
+    --require-lowercase-characters \
+    --min-password-length 14 \
+    --password-reuse-prevention 24 \
+    --max-password-age 90
+
+# Enable MFA deletion for S3
+aws s3api put-bucket-versioning \
+    --bucket your-bucket \
+    --versioning-configuration Status=Enabled,MFADelete=Enabled
+
+IAM Policy for MFA Enforcement
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "BlockMostAccessUnlessSignedInWithMFA",
+            "Effect": "Deny",
+            "NotAction": [
+                "iam:CreateVirtualMFADevice",
+                "iam:EnableMFADevice",
+                "iam:ListMFADevices",
+                "iam:ListUsers",
+                "iam:ListVirtualMFADevices",
+                "iam:ResyncMFADevice"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "BoolIfExists": {
+                    "aws:MultiFactorAuthPresent": "false"
+                }
+            }
+        }
+    ]
+}
+
+Logging Implementation [NIST AU-2, SOC-2 CC7.2, GDPR Article 30]
+Enable CloudTrail
+aws cloudtrail create-trail \
+    --name your-trail-name \
+    --s3-bucket-name your-bucket \
+    --is-multi-region-trail \
+    --enable-log-file-validation
+
+aws cloudtrail start-logging --name your-trail-name
+
+Enable VPC Flow Logs
+aws ec2 create-flow-logs \
+    --resource-type VPC \
+    --resource-ids vpc-xxxxxxxx \
+    --traffic-type ALL \
+    --log-destination-type cloud-watch-logs \
+    --log-group-name /aws/vpc/flow-logs
+
+Encryption Implementation [NIST SC-13, SOC-2 CC6.7, GDPR Article 32]
+S3 Bucket Default Encryption
+aws s3api put-bucket-encryption \
+    --bucket your-bucket \
+    --server-side-encryption-configuration \
+    '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+
+EBS Volume Encryption
+aws ec2 enable-ebs-encryption-by-default --region your-region
+
+Network Security [NIST SC-7, SOC-2 CC6.6]
+Security Group Best Practices
+# Create restrictive security group
+aws ec2 create-security-group \
+    --group-name restricted-access \
+    --description "Restricted access security group"
+
+# Allow only necessary inbound traffic
+aws ec2 authorize-security-group-ingress \
+    --group-name restricted-access \
+    --protocol tcp \
+    --port 443 \
+    --cidr YOUR_IP_RANGE/32
+
+Network ACL Implementation
+# Create NACL
+aws ec2 create-network-acl \
+    --vpc-id vpc-xxxxxxxx
+
+# Add inbound rule
+aws ec2 create-network-acl-entry \
+    --network-acl-id acl-xxxxxxxx \
+    --rule-number 100 \
+    --protocol -1 \
+    --rule-action allow \
+    --ingress \
+    --cidr-block YOUR_IP_RANGE/32
+
+Backup and Recovery [NIST CP-9, SOC-2 CC7.3]
+Enable AWS Backup
+# Create backup vault
+aws backup create-backup-vault \
+    --backup-vault-name your-vault-name
+
+# Create backup plan
+aws backup create-backup-plan \
+    --backup-plan file://backup-plan.json
+
+backup-plan.json:
+{
+    "BackupPlanName": "DailyBackups",
+    "Rules": [
+        {
+            "RuleName": "DailyBackupRule",
+            "TargetBackupVaultName": "your-vault-name",
+            "ScheduleExpression": "cron(0 5 ? * * *)",
+            "StartWindowMinutes": 60,
+            "CompletionWindowMinutes": 120,
+            "Lifecycle": {
+                "DeleteAfterDays": 30
+            }
+        }
+    ]
+}
+
+Monitoring Implementation [NIST SI-4, SOC-2 CC7.2]
+CloudWatch Alarms
+# Create metric alarm
+aws cloudwatch put-metric-alarm \
+    --alarm-name unauthorized-api-calls \
+    --metric-name UnauthorizedAPICallCount \
+    --namespace AWS/CloudTrail \
+    --statistic Sum \
+    --period 300 \
+    --evaluation-periods 1 \
+    --threshold 1 \
+    --comparison-operator GreaterThanThreshold \
+    --alarm-actions arn:aws:sns:region:account-id:topic-name
+
+Enable GuardDuty
+aws guardduty enable-organization-admin-account \
+    --admin-account-id your-account-id
+
+aws guardduty create-detector \
+    --enable \
+    --finding-publishing-frequency FIFTEEN_MINUTES
+
