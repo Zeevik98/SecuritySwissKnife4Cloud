@@ -59,7 +59,9 @@ def create_forensic_snapshot(ec2_client, instance_id):
                 {'Key': 'SourceInstance', 'Value': instance_id},
                 {'Key': 'CreationTime', 'Value': datetime.now(timezone.utc).isoformat()}
             ]
-        }]
+        }],
+        Encrypted=True,
+        KmsKeyId=os.environ['SNAPSHOT_KMS_KEY_ID']
     )
     return snapshot['SnapshotId']
 
