@@ -1,7 +1,7 @@
-The following steps are requiered before implmanting the GEN-AI digital foransics team:
+The following steps are required before implementing the GEN-AI digital forensics team:
 
 IAM permissions:
-Lambda excution role(Added to existing relevant role,If use different invokation method SKIP.):
+Lambda execution role(Added to existing relevant role,If use different invocation method SKIP.):
 Required Actions:
 
 1.Bedrock Access:
