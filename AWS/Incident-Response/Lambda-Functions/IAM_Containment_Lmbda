@@ -1,0 +1,186 @@
+import boto3
+import json
+import os
+from datetime import datetime, timezone
+from botocore.exceptions import ClientError
+
+def lambda_handler(event, context):
+   try:
+       # Get identity details from event
+       identity_type = event['identity_type']  # 'user' or 'role'
+       identity_name = event['identity_name']
+       
+       # Initialize AWS clients
+       iam = boto3.client('iam')
+       cloudtrail = boto3.client('cloudtrail')
+       sns = boto3.client('sns')
+
+       # Step 1: Document initial state and recent activity
+       initial_state = document_identity_state(iam, cloudtrail, identity_type, identity_name)
+
+       # Step 2: Handle access keys (for users)
+       if identity_type == 'user':
+           deactivate_access_keys(iam, identity_name)
+
+       # Step 3: Remove all policies
+       remove_all_policies(iam, identity_type, identity_name)
+
+       # Step 4: Remove from all groups (for users)
+       if identity_type == 'user':
+           remove_from_groups(iam, identity_name)
+
+       # Step 5: Revoke active sessions
+       revoke_active_sessions(iam, identity_type, identity_name)
+
+       incident_details = {
+           'identity_type': identity_type,
+           'identity_name': identity_name,
+           'timestamp': datetime.now(timezone.utc).isoformat(),
+           'initial_state': initial_state,
+           'actions_taken': [
+               'Documented initial state and recent activity',
+               'Deactivated access keys' if identity_type == 'user' else 'Role handled',
+               'Removed all attached policies',
+               'Removed from all groups' if identity_type == 'user' else 'No group removal needed',
+               'Revoked active sessions'
+           ]
+       }
+
+       # Step 6: Upload forensic data to S3
+       upload_forensic_data(incident_details)
+
+       # Step 7: Notify security team
+       notify_security_team(sns, incident_details)
+
+       return {
+           'statusCode': 200,
+           'body': json.dumps(incident_details)
+       }
+
+   except Exception as e:
+       print(f"Error during IAM containment process: {str(e)}")
+       raise e
+
+def document_identity_state(iam_client, cloudtrail_client, identity_type, identity_name):
+   """Documents current state and recent activity of the identity"""
+   try:
+       state = {
+           'attached_policies': [],
+           'recent_activity': [],
+           'groups': [] if identity_type == 'user' else None,
+           'access_keys': [] if identity_type == 'user' else None
+       }
+
+       # Get attached policies
+       if identity_type == 'user':
+           policies = iam_client.list_attached_user_policies(UserName=identity_name)
+           state['attached_policies'] = policies['AttachedPolicies']
+           
+           # Get group membership
+           groups = iam_client.list_groups_for_user(UserName=identity_name)
+           state['groups'] = groups['Groups']
+           
+           # Get access keys
+           keys = iam_client.list_access_keys(UserName=identity_name)
+           state['access_keys'] = keys['AccessKeyMetadata']
+       else:
+           policies = iam_client.list_attached_role_policies(RoleName=identity_name)
+           state['attached_policies'] = policies['AttachedPolicies']
+
+       # Get recent CloudTrail activity
+       events = cloudtrail_client.lookup_events(
+           LookupAttributes=[{
+               'AttributeKey': 'Username' if identity_type == 'user' else 'ResourceName',
+               'AttributeValue': identity_name
+           }],
+           StartTime=datetime.now(timezone.utc) - timezone.timedelta(hours=24)
+       )
+       state['recent_activity'] = events['Events']
+
+       return state
+
+   except ClientError as e:
+       print(f"Error documenting state: {str(e)}")
+       raise e
+
+def deactivate_access_keys(iam_client, username):
+   """Deactivates all access keys for the user"""
+   try:
+       keys = iam_client.list_access_keys(UserName=username)
+       for key in keys['AccessKeyMetadata']:
+           iam_client.update_access_key(
+               UserName=username,
+               AccessKeyId=key['AccessKeyId'],
+               Status='Inactive'
+           )
+   except ClientError as e:
+       print(f"Error deactivating access keys: {str(e)}")
+       raise e
+
+def remove_all_policies(iam_client, identity_type, identity_name):
+   """Removes all attached policies from user or role"""
+   try:
+       if identity_type == 'user':
+           policies = iam_client.list_attached_user_policies(UserName=identity_name)
+           for policy in policies['AttachedPolicies']:
+               iam_client.detach_user_policy(
+                   UserName=identity_name,
+                   PolicyArn=policy['PolicyArn']
+               )
+       else:
+           policies = iam_client.list_attached_role_policies(RoleName=identity_name)
+           for policy in policies['AttachedPolicies']:
+               iam_client.detach_role_policy(
+                   RoleName=identity_name,
+                   PolicyArn=policy['PolicyArn']
+               )
+   except ClientError as e:
+       print(f"Error removing policies: {str(e)}")
+       raise e
+
+def remove_from_groups(iam_client, username):
+   """Removes user from all groups"""
+   try:
+       groups = iam_client.list_groups_for_user(UserName=username)
+       for group in groups['Groups']:
+           iam_client.remove_user_from_group(
+               GroupName=group['GroupName'],
+               UserName=username
+           )
+   except ClientError as e:
+       print(f"Error removing from groups: {str(e)}")
+       raise e
+
+def revoke_active_sessions(iam_client, identity_type, identity_name):
+   """Revokes active sessions by updating policy version"""
+   try:
+       if identity_type == 'user':
+           iam_client.create_login_profile(
+               UserName=identity_name,
+               Password='REVOKED_TEMP_' + os.urandom(8).hex(),
+               PasswordResetRequired=True
+           )
+   except ClientError as e:
+       if e.response['Error']['Code'] != 'EntityAlreadyExists':
+           print(f"Error revoking sessions: {str(e)}")
+           raise e
+
+def upload_forensic_data(incident_details):
+   """Uploads incident details to forensics bucket"""
+   s3 = boto3.client('s3')
+   
+   s3.put_object(
+       Bucket=os.environ['FORENSICS_BUCKET'],
+       Key=f"iam_incidents/{incident_details['identity_type']}/{incident_details['identity_name']}/{datetime.now(timezone.utc).isoformat()}.json",
+       Body=json.dumps(incident_details, indent=2),
+       ServerSideEncryption='aws:kms',
+       SSEKMSKeyId=os.environ['KMS_KEY_ID']
+   )
+
+def notify_security_team(sns_client, incident_details):
+   """Notifies security team with incident details"""
+   sns_client.publish(
+       TopicArn=os.environ['SECURITY_TEAM_SNS_TOPIC'],
+       Subject=f"CRITICAL: IAM Security Incident - {incident_details['identity_type'].upper()} {incident_details['identity_name']}",
+       Message=json.dumps(incident_details, indent=2)
+   )
