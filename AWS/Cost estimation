@@ -1,0 +1,63 @@
+This is a general monthly cost estimation, please use it as a reffrance and simulate the real time costs when implmanting.
+Basic Security Implementation
+
+CloudTrail:
+
+First trail: Free
+Management events: Free
+Data events: $0.10 per 100,000 events
+Estimated: $5-20/month
+
+
+S3 for Logs:
+
+Storage: $0.023 per GB
+Typical usage (50GB): ~$1.15/month
+
+
+GuardDuty:
+
+$0.001 per 100MB analyzed
+Estimated: $10-30/month
+
+
+AWS Backup:
+
+Storage: $0.05 per GB
+Restore: $0.03 per GB
+Estimated: $20-50/month depending on data volume
+
+
+
+Basic Total: $36-101/month
+Advanced Security Implementation
+
+All Basic features: $36-101/month
+Security Hub:
+
+$0.0 for AWS security standards
+$1.25 per 1,000 findings evaluated
+Estimated: $10-30/month
+
+
+AWS Config:
+
+$0.003 per configuration item recorded
+Typical usage: $15-40/month
+
+
+VPC Flow Logs:
+
+CloudWatch Logs storage: $0.50 per GB
+Typical usage: $5-15/month
+
+
+KMS:
+
+$1.00 per key/month
+$0.03 per 10,000 API calls
+Estimated: $3-10/month
+
+
+
+Advanced Total: $69-196/month
