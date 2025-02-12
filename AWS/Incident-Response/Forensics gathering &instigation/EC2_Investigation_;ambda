@@ -1,0 +1,180 @@
+import boto3
+import json
+import os
+from datetime import datetime, timezone
+from botocore.exceptions import ClientError
+
+class ForensicsContext:
+   def __init__(self, instance_id):
+       self.instance_id = instance_id
+       self.instance_type = None  # 'solo' or 'asg'
+       self.asg_name = None
+       self.timestamp = datetime.now(timezone.utc).isoformat()
+       self.evidence_path = f"/forensics/{self.instance_id}_{self.timestamp}"
+
+def lambda_handler(event, context):
+   try:
+       instance_id = event['instance_id']
+       forensics_context = ForensicsContext(instance_id)
+       
+       # Initialize AWS clients
+       ec2 = boto3.client('ec2')
+       asg = boto3.client('autoscaling')
+       ssm = boto3.client('ssm')
+       sns = boto3.client('sns')
+       s3 = boto3.client('s3')
+
+       # Check if instance is part of ASG
+       instance_context = discover_instance_context(forensics_context, ec2, asg)
+       if instance_context['is_asg']:
+           handle_asg_instance(forensics_context, asg)
+
+       # Create evidence directory
+       execute_commands(ssm, instance_id, [f'mkdir -p {forensics_context.evidence_path}'])
+
+       # Collect evidence using pre-installed tools
+       evidence = {
+           'memory_dump': collect_memory_dump(forensics_context, ssm),
+           'disk_analysis': collect_disk_evidence(forensics_context, ssm),
+           'network_capture': collect_network_evidence(forensics_context, ssm),
+           'malware_scan': collect_malware_evidence(forensics_context, ssm),
+           'file_analysis': collect_file_evidence(forensics_context, ssm)
+       }
+
+       # Create and store report
+       report = create_forensics_report(forensics_context, instance_context, evidence)
+       store_and_notify(report, s3, sns)
+
+       return {
+           'statusCode': 200,
+           'body': json.dumps(report)
+       }
+
+   except Exception as e:
+       print(f"Error during forensics: {str(e)}")
+       raise
+
+def collect_memory_dump(context, ssm):
+   """Collect memory evidence using pre-installed LiME"""
+   commands = [
+       f'insmod /lib/modules/$(uname -r)/misc/lime.ko "path={context.evidence_path}/memory.lime format=lime"',
+       f'dd if=/proc/kcore of={context.evidence_path}/kcore.dump bs=1M count=1024'
+   ]
+   return execute_commands(ssm, context.instance_id, commands)
+
+def collect_disk_evidence(context, ssm):
+   """Collect disk evidence using pre-installed Sleuthkit"""
+   commands = [
+       f'mmls /dev/xvda > {context.evidence_path}/disk_layout.txt',
+       f'fls -r /dev/xvda > {context.evidence_path}/files_list.txt',
+       f'fsstat /dev/xvda > {context.evidence_path}/filesystem_stats.txt'
+   ]
+   return execute_commands(ssm, context.instance_id, commands)
+
+def collect_network_evidence(context, ssm):
+   """Collect network evidence using pre-installed tcpdump"""
+   commands = [
+       f'tcpdump -w {context.evidence_path}/capture.pcap -c 1000',
+       f'netstat -anp > {context.evidence_path}/connections.txt',
+       f'lsof -i > {context.evidence_path}/network_files.txt'
+   ]
+   return execute_commands(ssm, context.instance_id, commands)
+
+def collect_malware_evidence(context, ssm):
+   """Collect malware evidence using pre-installed YARA"""
+   commands = [
+       f'yara -r /var/yara/rules/* / > {context.evidence_path}/yara_findings.txt 2>/dev/null',
+       f'find / -type f -name ".*" -ls > {context.evidence_path}/hidden_files.txt'
+   ]
+   return execute_commands(ssm, context.instance_id, commands)
+
+def collect_file_evidence(context, ssm):
+   """Collect file evidence using pre-installed Foremost"""
+   commands = [
+       f'foremost -t all -i /dev/xvda -o {context.evidence_path}/recovered_files',
+       f'find / -type f -mtime -1 -ls > {context.evidence_path}/recent_files.txt'
+   ]
+   return execute_commands(ssm, context.instance_id, commands)
+
+def discover_instance_context(context, ec2, asg):
+   """Check if instance is part of ASG"""
+   response = asg.describe_auto_scaling_instances(
+       InstanceIds=[context.instance_id]
+   )
+   
+   is_asg = bool(response['AutoScalingInstances'])
+   if is_asg:
+       context.instance_type = 'asg'
+       context.asg_name = response['AutoScalingInstances'][0]['AutoScalingGroupName']
+   else:
+       context.instance_type = 'solo'
+   
+   return {'is_asg': is_asg}
+
+def handle_asg_instance(context, asg):
+   """Handle ASG instance"""
+   asg.detach_instances(
+       InstanceIds=[context.instance_id],
+       AutoScalingGroupName=context.asg_name,
+       ShouldDecrementDesiredCapacity=True
+   )
+
+def execute_commands(ssm, instance_id, commands):
+   """Execute commands via SSM"""
+   results = {}
+   for cmd in commands:
+       response = ssm.send_command(
+           InstanceIds=[instance_id],
+           DocumentName='AWS-RunShellScript',
+           Parameters={'commands': [cmd]}
+       )
+       
+       command_id = response['Command']['CommandId']
+       output = ssm.get_command_invocation(
+           CommandId=command_id,
+           InstanceId=instance_id
+       )
+       
+       results[cmd] = {
+           'output': output['StandardOutputContent'],
+           'error': output['StandardErrorContent'],
+           'status': output['Status']
+       }
+   
+   return results
+
+def create_forensics_report(context, instance_context, evidence):
+   """Create forensics report"""
+   return {
+       'investigation_id': f"forensics_{context.instance_id}_{context.timestamp}",
+       'instance_info': {
+           'instance_id': context.instance_id,
+           'instance_type': context.instance_type,
+           'asg_name': context.asg_name if context.instance_type == 'asg' else None
+       },
+       'timestamp': context.timestamp,
+       'evidence_path': context.evidence_path,
+       'evidence_collected': evidence
+   }
+
+def store_and_notify(report, s3_client, sns_client):
+   """Store evidence in S3 and notify security team"""
+   s3_key = f"forensics/{report['investigation_id']}/report.json"
+   
+   s3_client.put_object(
+       Bucket=os.environ['FORENSICS_BUCKET'],
+       Key=s3_key,
+       Body=json.dumps(report, indent=2),
+       ServerSideEncryption='aws:kms'
+   )
+
+   sns_client.publish(
+       TopicArn=os.environ['SECURITY_TEAM_SNS_TOPIC'],
+       Subject=f"Forensics Report - Instance {report['instance_info']['instance_id']}",
+       Message=json.dumps({
+           'investigation_id': report['investigation_id'],
+           'instance_id': report['instance_info']['instance_id'],
+           'timestamp': report['timestamp'],
+           'report_location': f"s3://{os.environ['FORENSICS_BUCKET']}/{s3_key}"
+       }, indent=2)
+   )
