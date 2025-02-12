@@ -1,0 +1,107 @@
+import boto3
+import json
+import os
+from datetime import datetime, timezone
+
+def lambda_handler(event, context):
+    try:
+        # Get task and container details from event
+        cluster_name = event['cluster_name']
+        task_id = event['task_id']
+        container_name = event['container_name']
+        
+        # Initialize AWS clients
+        ecs = boto3.client('ecs')
+        ec2 = boto3.client('ec2')
+        sns = boto3.client('sns')
+
+        # Step 1: Create snapshot of ECS container instance
+        instance_id = get_container_instance_id(ecs, cluster_name, task_id)
+        snapshot_id = create_forensic_snapshot(ec2, instance_id)
+
+        # Step 2: Isolate the container networking
+        isolate_container(ecs, cluster_name, task_id, container_name)
+
+        # Step 3: Update task IAM role
+        remove_task_role(ecs, cluster_name, task_id)
+
+        incident_details = {
+            'cluster_name': cluster_name,
+            'task_id': task_id,
+            'container_name': container_name,
+            'instance_id': instance_id,
+            'snapshot_id': snapshot_id,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'actions_taken': [
+                'Created encrypted forensic snapshot of container instance',
+                'Isolated container networking',
+                'Removed task IAM role'
+            ]
+        }
+
+        notify_security_team(sns, incident_details)
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps(incident_details)
+        }
+
+    except Exception as e:
+        print(f"Error during container containment process: {str(e)}")
+        raise e
+
+def get_container_instance_id(ecs_client, cluster_name, task_id):
+    task_response = ecs_client.describe_tasks(
+        cluster=cluster_name,
+        tasks=[task_id]
+    )
+    container_instance_arn = task_response['tasks'][0]['containerInstanceArn']
+    
+    instance_response = ecs_client.describe_container_instances(
+        cluster=cluster_name,
+        containerInstances=[container_instance_arn]
+    )
+    return instance_response['containerInstances'][0]['ec2InstanceId']
+
+def create_forensic_snapshot(ec2_client, instance_id):
+    response = ec2_client.describe_instances(InstanceIds=[instance_id])
+    volume_id = response['Reservations'][0]['Instances'][0]['BlockDeviceMappings'][0]['Ebs']['VolumeId']
+    
+    snapshot = ec2_client.create_snapshot(
+        VolumeId=volume_id,
+        Description=f'Forensic snapshot of ECS instance {instance_id}',
+        TagSpecifications=[{
+            'ResourceType': 'snapshot',
+            'Tags': [
+                {'Key': 'Purpose', 'Value': 'Forensics'},
+                {'Key': 'SourceInstance', 'Value': instance_id},
+                {'Key': 'CreationTime', 'Value': datetime.now(timezone.utc).isoformat()}
+            ]
+        }],
+        Encrypted=True,
+        KmsKeyId=os.environ['SNAPSHOT_KMS_KEY_ID']
+    )
+    return snapshot['SnapshotId']
+
+def isolate_container(ecs_client, cluster_name, task_id, container_name):
+    ISOLATION_SG = os.environ['ISOLATION_SECURITY_GROUP_ID']
+    
+    ecs_client.update_container_instances_state(
+        cluster=cluster_name,
+        containerInstances=[task_id],
+        status='DRAINING'
+    )
+
+def remove_task_role(ecs_client, cluster_name, task_id):
+    ecs_client.update_task(
+        cluster=cluster_name,
+        task=task_id,
+        taskRoleArn=''
+    )
+
+def notify_security_team(sns_client, incident_details):
+    sns_client.publish(
+        TopicArn=os.environ['SECURITY_TEAM_SNS_TOPIC'],
+        Subject=f"CRITICAL: Container Security Incident - Task {incident_details['task_id']}",
+        Message=json.dumps(incident_details, indent=2)
+    )
