@@ -1,0 +1,30 @@
+For the lambda containment we need to add additinal layer with depnacies in order for it to work.
+Here are the steps:
+1.Create directory structure:
+mkdir eks-layer
+cd eks-layer
+
+2.Create requirements.txt:
+kubernetes==28.1.0
+urllib3<2.0.0
+requests
+pyyaml
+google-auth
+websocket-client
+
+3.Install dependencies:
+pip install -r requirements.txt -t python/lib/python3.9/site-packages
+
+4.Create ZIP:
+zip -r eks-layer.zip python/
+
+5.Addon to AWS:
+Choose your favorite method GUI\CLI
+
+##Details:
+Layer Size
+Approximately 28MB compressed (within Lambda layer limits)
+
+Python supported versions:
+Python 3.9-3.10
+
