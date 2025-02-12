@@ -1,0 +1,33 @@
+# Container Incident Response Lambda
+
+This Lambda function implements automated incident response for ECS container environments. It performs containment actions while preserving forensic evidence.
+
+## Features
+
+- Creates forensic snapshots of container instances
+- Isolates compromised containers while maintaining evidence
+- Removes container task roles
+- Preserves container memory for forensics
+- Notifications to security team
+
+## Prerequisites
+
+- Pre-configured isolation security group
+- SNS topic for security notifications
+- Appropriate IAM permissions for ECS operations
+- ECS cluster with running tasks
+ -Create KMS keyes for encryption
+
+## Required Environment Variables
+
+- `ISOLATION_SECURITY_GROUP_ID`: ID of pre-created security group for isolation
+- `SECURITY_TEAM_SNS_TOPIC`: ARN of SNS topic for notifications
+
+## Input Event Format
+
+```json
+{
+    "cluster_name": "ecs-cluster-name",
+    "task_id": "task-id",
+    "container_name": "container-name"
+}
