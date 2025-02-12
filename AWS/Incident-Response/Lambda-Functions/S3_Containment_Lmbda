@@ -1,0 +1,168 @@
+import boto3
+import json
+import os
+from datetime import datetime, timezone
+from botocore.exceptions import ClientError
+
+def lambda_handler(event, context):
+   try:
+       # Get bucket details from event
+       bucket_name = event['bucket_name']
+       suspicious_prefix = event.get('suspicious_prefix')  # Optional
+       
+       # Initialize AWS clients
+       s3 = boto3.client('s3')
+       iam = boto3.client('iam')
+       sns = boto3.client('sns')
+
+       # Step 1: Document initial bucket state and roles
+       initial_state = document_bucket_state(s3, iam, bucket_name)
+
+       # Step 2: Remove bucket roles and profiles
+       remove_bucket_roles(iam, bucket_name)
+
+       # Step 3: Block all public access
+       block_public_access(s3, bucket_name)
+
+       # Step 4: Enable versioning and MFA Delete
+       enable_bucket_protection(s3, bucket_name)
+
+       # Step 5: Quarantine suspicious objects if specified
+       quarantine_info = None
+       if suspicious_prefix:
+           quarantine_info = quarantine_objects(s3, bucket_name, suspicious_prefix)
+
+       incident_details = {
+           'bucket_name': bucket_name,
+           'timestamp': datetime.now(timezone.utc).isoformat(),
+           'initial_state': initial_state,
+           'quarantine_info': quarantine_info,
+           'actions_taken': [
+               'Documented initial state and roles',
+               'Removed bucket roles and policies',
+               'Blocked all public access',
+               'Enabled versioning and MFA Delete',
+               f'Quarantined objects under prefix: {suspicious_prefix}' if suspicious_prefix else 'No objects quarantined'
+           ]
+       }
+
+       # Step 6: Notify security team
+       notify_security_team(sns, incident_details)
+
+       return {
+           'statusCode': 200,
+           'body': json.dumps(incident_details)
+       }
+
+   except Exception as e:
+       print(f"Error during S3 containment process: {str(e)}")
+       raise e
+
+def document_bucket_state(s3_client, iam_client, bucket_name):
+   """Captures initial bucket configuration and roles for forensics"""
+   try:
+       # Get bucket roles
+       roles = iam_client.list_roles(
+           PathPrefix=f"/aws-service-role/s3.amazonaws.com/"
+       )
+       
+       bucket_roles = []
+       for role in roles['Roles']:
+           attached_policies = iam_client.list_attached_role_policies(
+               RoleName=role['RoleName']
+           )
+           bucket_roles.append({
+               'RoleName': role['RoleName'],
+               'RoleId': role['RoleId'],
+               'Policies': attached_policies['AttachedPolicies']
+           })
+
+       return {
+           'public_access_block': s3_client.get_public_access_block(Bucket=bucket_name),
+           'bucket_policy': s3_client.get_bucket_policy(Bucket=bucket_name),
+           'versioning': s3_client.get_bucket_versioning(Bucket=bucket_name),
+           'bucket_acl': s3_client.get_bucket_acl(Bucket=bucket_name),
+           'bucket_roles': bucket_roles
+       }
+   except ClientError as e:
+       if e.response['Error']['Code'] == 'NoSuchBucketPolicy':
+           return {'error': 'No bucket policy exists'}
+       raise e
+
+def remove_bucket_roles(iam_client, bucket_name):
+   """Removes all roles and policies associated with the bucket"""
+   roles = iam_client.list_roles(
+       PathPrefix=f"/aws-service-role/s3.amazonaws.com/"
+   )
+   
+   for role in roles['Roles']:
+       # First detach all policies
+       attached_policies = iam_client.list_attached_role_policies(
+           RoleName=role['RoleName']
+       )
+       
+       for policy in attached_policies['AttachedPolicies']:
+           iam_client.detach_role_policy(
+               RoleName=role['RoleName'],
+               PolicyArn=policy['PolicyArn']
+           )
+
+def block_public_access(s3_client, bucket_name):
+   """Blocks all forms of public access to the bucket"""
+   s3_client.put_public_access_block(
+       Bucket=bucket_name,
+       PublicAccessBlockConfiguration={
+           'BlockPublicAcls': True,
+           'IgnorePublicAcls': True,
+           'BlockPublicPolicy': True,
+           'RestrictPublicBuckets': True
+       }
+   )
+
+def enable_bucket_protection(s3_client, bucket_name):
+   """Enables versioning and MFA Delete for evidence preservation"""
+   s3_client.put_bucket_versioning(
+       Bucket=bucket_name,
+       VersioningConfiguration={
+           'Status': 'Enabled',
+           'MFADelete': 'Enabled'
+       }
+   )
+
+def quarantine_objects(s3_client, source_bucket, suspicious_prefix):
+   """Moves suspicious objects to quarantine bucket with tracking"""
+   quarantine_bucket = os.environ['QUARANTINE_BUCKET']
+   
+   objects = s3_client.list_objects_v2(
+       Bucket=source_bucket,
+       Prefix=suspicious_prefix
+   )
+
+   quarantined_objects = []
+   for obj in objects.get('Contents', []):
+       s3_client.copy_object(
+           Bucket=quarantine_bucket,
+           Key=f"{source_bucket}/{obj['Key']}",
+           CopySource={'Bucket': source_bucket, 'Key': obj['Key']},
+           Metadata={
+               'OriginalBucket': source_bucket,
+               'QuarantineTime': datetime.now(timezone.utc).isoformat(),
+               'OriginalPath': obj['Key']
+           },
+           MetadataDirective='REPLACE',
+           TaggingDirective='COPY'
+       )
+       quarantined_objects.append(obj['Key'])
+
+   return {
+       'quarantine_bucket': quarantine_bucket,
+       'quarantined_objects': quarantined_objects
+   }
+
+def notify_security_team(sns_client, incident_details):
+   """Notifies security team with incident details"""
+   sns_client.publish(
+       TopicArn=os.environ['SECURITY_TEAM_SNS_TOPIC'],
+       Subject=f"CRITICAL: S3 Security Incident - Bucket {incident_details['bucket_name']}",
+       Message=json.dumps(incident_details, indent=2)
+   )
