@@ -1,4 +1,4 @@
-In case you want to utilaise the lambdas to work in a cross account enviorment some adjustments needed to be done.
+In case you want to utilize the lambdas to work in a cross account environment some adjustments need to be done.
 Here are a few templates for needed changes for this to occur:
 
 ##Prerequisits:
