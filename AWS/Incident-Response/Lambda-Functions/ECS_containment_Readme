@@ -13,15 +13,40 @@ This Lambda function implements automated incident response for ECS container en
 ## Prerequisites
 
 - Pre-configured isolation security group
+-Create a costume lambda role(Needed permissions below)
 - SNS topic for security notifications
 - Appropriate IAM permissions for ECS operations
 - ECS cluster with running tasks
  -Create KMS keyes for encryption
 
+##Lambda Execution role permissions
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:DescribeTasks",
+                "ecs:DescribeContainerInstances",
+                "ecs:UpdateContainerInstancesState",
+                "ecs:UpdateTask",
+                "ec2:CreateSnapshot",
+                "ec2:DescribeInstances",
+                "ec2:CreateTags",
+                "kms:Encrypt",
+                "kms:GenerateDataKey",
+                "sns:Publish"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
 ## Required Environment Variables
 
-- `ISOLATION_SECURITY_GROUP_ID`: ID of pre-created security group for isolation
-- `SECURITY_TEAM_SNS_TOPIC`: ARN of SNS topic for notifications
+ISOLATION_SECURITY_GROUP_ID=sg-xxxxx
+SECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
+SNAPSHOT_KMS_KEY_ID=arn:aws:kms:region:account:key/xxxxx
 
 ## Input Event Format
 
