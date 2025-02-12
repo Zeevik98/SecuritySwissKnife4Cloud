@@ -1,0 +1,33 @@
+{
+    "incident_id": "string",
+    "timestamp": "ISO8601",
+    "account_info": {
+        "account_id": "string",
+        "region": "string",
+        "resource_type": "EC2|ECS|EKS|S3|IAM|RDS"
+    },
+    "incident_details": {
+        "severity": "HIGH|MEDIUM|LOW",
+        "type": "string",
+        "resource_id": "string",
+        "finding_source": "string"
+    },
+    "actions_taken": [
+        {
+            "action": "string",
+            "timestamp": "ISO8601",
+            "status": "SUCCESS|FAILED",
+            "details": "string"
+        }
+    ],
+    "evidence_collected": {
+        "type": "string",
+        "location": "string",
+        "hash": "string"
+    },
+    "metadata": {
+        "containment_status": "string",
+        "investigation_status": "string",
+        "tags": {}
+    }
+}
