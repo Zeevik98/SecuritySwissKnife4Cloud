@@ -1,0 +1,61 @@
+The Standard Output Format serves several critical purposes in our security operations automation:
+Purpose & Usage
+
+Standardized Incident Tracking
+
+
+Used whenever any security lambda (containment or investigation) completes its operation
+Ensures consistent data structure across different resource types (EC2, ECS, S3, etc.)
+Enables automated correlation of related incidents
+
+
+SIEM Integration
+
+
+Provides a uniform format for ingestion into various SIEM platforms
+Reduces the need for custom parsers for each event type
+Makes it easier to create standardized dashboards and alerts
+
+
+Incident Response Workflow
+
+
+Tracks the complete lifecycle of an incident
+Documents all actions taken
+Maintains chain of custody for evidence
+
+
+Compliance Requirements
+
+
+Meets logging requirements for various frameworks (NIST, SOC2, GDPR)
+Provides audit trail of security actions
+Documents response timelines
+
+##Example use cases:
+Incident Detection
+{
+    "incident_id": "SEC-2025-001",
+    "timestamp": "2025-02-12T15:30:00Z",
+    "account_info": {
+        "account_id": "123456789012",
+        "region": "us-west-2",
+        "resource_type": "EC2"
+    },
+    "incident_details": {
+        "severity": "HIGH",
+        "type": "CRYPTOMINING",
+        "resource_id": "i-1234567890abcdef0",
+        "finding_source": "GuardDuty"
+    }
+}
+
+Investigation Results
+{
+    "incident_id": "SEC-2025-001",
+    "evidence_collected": {
+        "type": "MEMORY_DUMP",
+        "location": "s3://forensics-bucket/SEC-2025-001/memory.lime",
+        "hash": "sha256:abc123..."
+    }
+}
