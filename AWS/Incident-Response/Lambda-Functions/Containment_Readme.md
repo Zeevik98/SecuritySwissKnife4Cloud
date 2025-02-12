@@ -43,6 +43,9 @@ Other policy updates needed:
 2.KMS policy to allow encryption\decryption actions(HAve to have according to best practice)
 3.CloudWatch policy for metrics and logs(Or any other alternative solution used in your organisation)
 
+
+Also create an osilation Security group and use it ID 
+
 Variable list:
 ENVIRONMENT_VARIABLES = {
     'INVESTIGATION_LAMBDA_ARN': 'arn:aws:lambda:region:account:function:investigation-lambda',
@@ -51,6 +54,8 @@ ENVIRONMENT_VARIABLES = {
     'WAF_IPSET_NAME': 'blocked-ips',
     'KMS_KEY_ID': 'key-id',
     'FORENSICS_BUCKET': 'forensics-bucket-name'
+    ISOLATION_SECURITY_GROUP_ID=sg-xxxxx
+    SECURITY_TEAM_SNS_TOPIC=arn:aws:sns:region:account:topic-name
 }
 
 
