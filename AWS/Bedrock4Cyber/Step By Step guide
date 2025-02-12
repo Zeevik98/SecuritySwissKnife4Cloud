@@ -4,7 +4,7 @@ B.Select "Knowledge bases"
 C.Click "Create knowledge base"
 D.Name: "ForensicsAnalysis"
 E.Model: Claude
-F.Add base prompt from Part 2
+F.Add base prompt from Prerequisits
 
 Step 2: Configure Data Sources
 A.Under "Data sources"
