@@ -1,0 +1,204 @@
+# Required Lambda Layer:
+# 1. ECS Helper Layer:
+#    - Create directory: python/lib/python3.9/site-packages
+#    - Install: boto3 (comes with runtime)
+#    - Layer size: minimal
+
+import boto3
+import json
+import os
+from datetime import datetime, timezone
+from botocore.exceptions import ClientError
+
+class ForensicsContext:
+    def __init__(self, cluster_name, task_id, container_name):
+        self.cluster_name = cluster_name
+        self.task_id = task_id
+        self.container_name = container_name
+        self.timestamp = datetime.now(timezone.utc).isoformat()
+        self.evidence_path = f"/forensics/{task_id}_{self.timestamp}"
+
+def lambda_handler(event, context):
+    try:
+        cluster_name = event['cluster_name']
+        task_id = event['task_id']
+        container_name = event['container_name']
+        
+        forensics_context = ForensicsContext(cluster_name, task_id, container_name)
+        
+        # Initialize AWS clients
+        ecs = boto3.client('ecs')
+        ssm = boto3.client('ssm')
+        sns = boto3.client('sns')
+        s3 = boto3.client('s3')
+
+        # Get container instance and task details
+        container_instance, task_details = get_container_details(forensics_context, ecs)
+        
+        # Create evidence directory
+        create_evidence_dir(forensics_context, ssm, container_instance)
+
+        # Collect evidence
+        evidence = {
+            'metadata': collect_metadata(forensics_context, task_details, container_instance),
+            'memory_dump': collect_memory_evidence(forensics_context, ssm, container_instance),
+            'container_state': collect_container_state(forensics_context, ssm, container_instance),
+            'network_data': collect_network_evidence(forensics_context, ssm, container_instance),
+            'filesystem_data': collect_filesystem_evidence(forensics_context, ssm, container_instance),
+            'malware_scan': perform_malware_scan(forensics_context, ssm, container_instance)
+        }
+
+        # Create and store report
+        report = create_forensics_report(forensics_context, evidence)
+        store_and_notify(report, s3, sns)
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps(report)
+        }
+
+    except Exception as e:
+        print(f"Error during container forensics: {str(e)}")
+        raise
+
+def get_container_details(context, ecs):
+    """Get container instance and task details"""
+    task = ecs.describe_tasks(
+        cluster=context.cluster_name,
+        tasks=[context.task_id]
+    )['tasks'][0]
+    
+    container_instance_arn = task['containerInstanceArn']
+    container_instance = ecs.describe_container_instances(
+        cluster=context.cluster_name,
+        containerInstances=[container_instance_arn]
+    )['containerInstances'][0]
+    
+    return container_instance, task
+
+def collect_metadata(context, task_details, container_instance):
+    """Collect container and task metadata"""
+    return {
+        'task_metadata': task_details,
+        'container_instance': container_instance,
+        'timestamp': context.timestamp,
+        'container_name': context.container_name
+    }
+
+def create_evidence_dir(context, ssm, container_instance):
+    """Create forensics directory"""
+    cmd = f'mkdir -p {context.evidence_path}'
+    execute_command(ssm, container_instance['ec2InstanceId'], cmd)
+
+def collect_memory_evidence(context, ssm, container_instance):
+    """Collect memory evidence using LiME"""
+    commands = [
+        f'cd {context.evidence_path}',
+        f'insmod /lime.ko "path=./memory.lime format=lime" pid=$(docker inspect --format="{{{{.State.Pid}}}}" {context.container_name})',
+        f'cat /proc/$(docker inspect --format="{{{{.State.Pid}}}}" {context.container_name})/maps > {context.evidence_path}/memory_maps.txt',
+        f'cat /proc/$(docker inspect --format="{{{{.State.Pid}}}}" {context.container_name})/status > {context.evidence_path}/process_status.txt'
+    ]
+    return execute_commands(ssm, container_instance['ec2InstanceId'], commands)
+
+def collect_container_state(context, ssm, container_instance):
+    """Collect container state and process information"""
+    commands = [
+        f'docker inspect {context.container_name} > {context.evidence_path}/container_details.json',
+        f'docker top {context.container_name} -eo pid,ppid,cmd > {context.evidence_path}/processes.txt',
+        f'docker logs {context.container_name} > {context.evidence_path}/container_logs.txt 2>&1',
+        f'docker exec {context.container_name} ps aux > {context.evidence_path}/internal_processes.txt'
+    ]
+    return execute_commands(ssm, container_instance['ec2InstanceId'], commands)
+
+def collect_network_evidence(context, ssm, container_instance):
+    """Collect network evidence using tcpdump"""
+    commands = [
+        f'docker exec {context.container_name} netstat -anp > {context.evidence_path}/netstat.txt',
+        f'docker exec {context.container_name} tcpdump -w {context.evidence_path}/capture.pcap -c 1000',
+        f'docker exec {context.container_name} lsof -i > {context.evidence_path}/network_files.txt',
+        f'docker inspect --format="{{{{.NetworkSettings}}}}" {context.container_name} > {context.evidence_path}/network_settings.json'
+    ]
+    return execute_commands(ssm, container_instance['ec2InstanceId'], commands)
+
+def collect_filesystem_evidence(context, ssm, container_instance):
+    """Collect filesystem evidence using Sleuthkit"""
+    commands = [
+        f'docker export {context.container_name} > {context.evidence_path}/container_fs.tar',
+        f'cd {context.evidence_path} && tar tvf container_fs.tar > filesystem_listing.txt',
+        f'docker exec {context.container_name} find / -type f -mtime -1 -ls > {context.evidence_path}/recent_files.txt',
+        f'docker diff {context.container_name} > {context.evidence_path}/filesystem_changes.txt'
+    ]
+    return execute_commands(ssm, container_instance['ec2InstanceId'], commands)
+
+def perform_malware_scan(context, ssm, container_instance):
+    """Perform malware scan using YARA"""
+    commands = [
+        f'docker exec {context.container_name} yara -r /var/yara/rules/* / > {context.evidence_path}/yara_findings.txt 2>/dev/null',
+        f'docker exec {context.container_name} find / -type f -name ".*" -ls > {context.evidence_path}/hidden_files.txt'
+    ]
+    return execute_commands(ssm, container_instance['ec2InstanceId'], commands)
+
+def execute_commands(ssm, instance_id, commands):
+    """Execute multiple commands via SSM"""
+    results = {}
+    for cmd in commands:
+        results[cmd] = execute_command(ssm, instance_id, cmd)
+    return results
+
+def execute_command(ssm, instance_id, command):
+    """Execute single command via SSM"""
+    try:
+        response = ssm.send_command(
+            InstanceIds=[instance_id],
+            DocumentName='AWS-RunShellScript',
+            Parameters={'commands': [command]}
+        )
+        
+        command_id = response['Command']['CommandId']
+        output = ssm.get_command_invocation(
+            CommandId=command_id,
+            InstanceId=instance_id
+        )
+        
+        return {
+            'output': output['StandardOutputContent'],
+            'error': output['StandardErrorContent'],
+            'status': output['Status']
+        }
+    except Exception as e:
+        return {
+            'error': str(e),
+            'status': 'Failed'
+        }
+
+def create_forensics_report(context, evidence):
+    """Create forensics report"""
+    return {
+        'investigation_id': f"forensics_{context.task_id}_{context.timestamp}",
+        'container_info': evidence['metadata'],
+        'timestamp': context.timestamp,
+        'evidence_path': context.evidence_path,
+        'evidence_collected': evidence
+    }
+
+def store_and_notify(report, s3_client, sns_client):
+    """Store evidence in S3 and notify security team"""
+    s3_key = f"container_forensics/{report['investigation_id']}/report.json"
+    
+    s3_client.put_object(
+        Bucket=os.environ['FORENSICS_BUCKET'],
+        Key=s3_key,
+        Body=json.dumps(report, indent=2),
+        ServerSideEncryption='aws:kms'
+    )
+
+    sns_client.publish(
+        TopicArn=os.environ['SECURITY_TEAM_SNS_TOPIC'],
+        Subject=f"Container Forensics Report - Task {report['container_info']['task_metadata']['taskArn']}",
+        Message=json.dumps({
+            'investigation_id': report['investigation_id'],
+            'task_id': report['container_info']['task_metadata']['taskArn'],
+            'timestamp': report['timestamp'],
+            'report_location': f"s3://{os.environ['FORENSICS_BUCKET']}/{s3_key}"
+        }, indent=2)
+    )
