@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-01'
+Description: 'Forensics Lambda Infrastructure Setup'
+
+Parameters:
+  RetentionDays:
+    Type: Number
+    Default: 365
+    Description: Number of days to retain forensics data
+
+Resources:
+  # S3 Bucket with anti-tampering configurations
+  ForensicsBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-forensics-bucket'
+      VersioningConfiguration:
+        Status: Enabled
+      ObjectLockConfiguration:
+        ObjectLockEnabled: 'Enabled'
+        Rule:
+          DefaultRetention:
+            Mode: GOVERNANCE
+            Days: !Ref RetentionDays
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: !GetAtt ForensicsKMSKey.Arn
+      LifecycleConfiguration:
+        Rules:
+          - Id: RetentionRule
+            Status: Enabled
+            ExpirationInDays: !Ref RetentionDays
+
+  # KMS Key for encryption
+  ForensicsKMSKey:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: 'KMS key for forensics data encryption'
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: 'Enable IAM User Permissions'
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+  # Lambda Execution Role
+  ForensicsLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: ForensicsPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # EC2 and ASG Permissions
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'autoscaling:DescribeAutoScalingInstances'
+                  - 'autoscaling:DetachInstances'
+                Resource: '*'
+              
+              # SSM Permissions
+              - Effect: Allow
+                Action:
+                  - 'ssm:SendCommand'
+                  - 'ssm:GetCommandInvocation'
+                Resource: '*'
+              
+              # S3 Permissions
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:PutObjectVersion'
+                Resource: !Sub '${ForensicsBucket.Arn}/*'
+              
+              # SNS Permissions
+              - Effect: Allow
+                Action:
+                  - 'sns:Publish'
+                Resource: '*'  # Should be restricted to specific SNS topic ARN
+              
+              # KMS Permissions
+              - Effect: Allow
+                Action:
+                  - 'kms:Encrypt'
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey'
+                Resource: !GetAtt ForensicsKMSKey.Arn
+
+  # S3 Bucket Policy
+  ForensicsBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref ForensicsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: 'DenyUnencryptedObjectUploads'
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource: !Sub '${ForensicsBucket.Arn}/*'
+            Condition:
+              StringNotEquals:
+                's3:x-amz-server-side-encryption': 'aws:kms'
+          - Sid: 'DenyIncorrectEncryptionHeader'
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource: !Sub '${ForensicsBucket.Arn}/*'
+            Condition:
+              StringNotEquals:
+                's3:x-amz-server-side-encryption-aws-kms-key-id': !GetAtt ForensicsKMSKey.Arn
+
+Outputs:
+  ForensicsBucketName:
+    Description: 'Name of the forensics bucket'
+    Value: !Ref ForensicsBucket
+
+  ForensicsLambdaRoleARN:
+    Description: 'ARN of the Lambda execution role'
+    Value: !GetAtt ForensicsLambdaRole.Arn
+
+  ForensicsKMSKeyARN:
+    Description: 'ARN of the KMS key'
+    Value: !GetAtt ForensicsKMSKey.Arn
