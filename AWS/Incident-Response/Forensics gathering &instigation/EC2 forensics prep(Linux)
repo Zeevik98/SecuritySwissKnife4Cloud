@@ -2,6 +2,9 @@
 The following tools will be used by an automation lambda to gather the full foransics picture of an EC2 instance
 This guide is designed for linux\unix based systems.seprate guide for Windows will be uploaded in the future.
 
+This tools can be used manually or be gathered to a single investigation lambda(In the repo).
+
+
 List of tolls:
 ##Memory Analysis Tools
 LiME (Linux Memory Extractor)
