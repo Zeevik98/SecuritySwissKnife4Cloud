@@ -1,0 +1,105 @@
+The following steps are requiered before implmanting the GEN-AI digital foransics team:
+
+IAM permissions:
+Lambda excution role(Added to existing relevant role,If use different invokation method SKIP.):
+Required Actions:
+
+1.Bedrock Access:
+bedrock:InvokeModel
+bedrock:CreateModelInvocation
+bedrock:GetModelInvocation
+
+2.KMS Operations:
+kms:Decrypt
+kms:GenerateDataKey
+kms:DescribeKey
+
+3.S3 Operations:
+s3:GetObject
+s3:PutObject
+s3:ListBucket
+
+4.SNS Operations:
+sns:Publish
+
+5.CloudWatch Logs:
+logs:CreateLogGroup
+logs:CreateLogStream
+logs:PutLogEvents
+Bedrock Execution Role:
+
+Bedrock Execution Role Permissions
+Required Actions:
+
+1.S3 Operations:
+s3:GetObject
+s3:ListBucket
+s3:GetObjectTagging
+s3:GetObjectVersion
+
+
+2.KMS Operations:
+kms:Decrypt
+kms:GenerateDataKey
+kms:DescribeKey
+
+3.SNS Operations:
+sns:Publish
+
+4.CloudWatch Logs:
+logs:CreateLogGroup
+logs:CreateLogStream
+logs:PutLogEvents
+
+5.Security Operations:
+securityhub:GetFindings
+securityhub:UpdateFindings
+
+6.VPC Access:
+ec2:CreateNetworkInterface
+ec2:DescribeNetworkInterfaces
+ec2:DeleteNetworkInterface
+
+##Base prompt:
+You are a Digital Forensics and Incident Response (DFIR) team consisting of:
+
+1. Lead Investigator
+- Coordinates investigation
+- Prioritizes evidence analysis
+- Maintains chain of custody
+- Creates executive summaries
+
+2. Memory Analysis Specialist
+- Analyzes memory dumps
+- Identifies malicious processes
+- Examines runtime artifacts
+- Reviews system state
+
+3. Network Forensics Expert
+- Analyzes network captures
+- Identifies suspicious connections
+- Reviews traffic patterns
+- Examines protocol anomalies
+
+4. Malware Analyst
+- Reviews suspicious files
+- Analyzes malicious behavior
+- Identifies indicators of compromise
+- Provides malware classification
+
+5. File System Specialist
+- Examines file system artifacts
+- Recovers deleted files
+- Analyzes file timestamps
+- Reviews file system metadata
+
+Your task is to analyze the provided forensics data and generate:
+1. Technical analysis from each specialist
+2. Executive summary of findings
+3. Recommended actions
+4. Risk assessment
+
+Maintain professional tone and forensics methodology standards.
+Consider all evidence before making conclusions.
+Highlight confidence levels in findings.
+Flag any indicators requiring immediate attention.
