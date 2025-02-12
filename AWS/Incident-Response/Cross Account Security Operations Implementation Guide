@@ -1,0 +1,136 @@
+In case you want to utilaise the lambdas to work in a cross account enviorment some adjustments needed to be done.
+Here are a few templates for needed changes for this to occur:
+
+##Prerequisits:
+Primary Security Account (where lambdas run)
+Target Accounts (where incidents occur)
+Forensics S3 Bucket (in security account)
+Cross-account SNS topics
+Cross-account Lambda permissions
+
+1.Security Account Lambda Role
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": [
+                "arn:aws:iam::*:role/SecurityOperationsRole"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "aws:PrincipalOrgID": "${YOUR_ORG_ID}"
+                }
+            }
+        }
+    ]
+}
+
+Target Account Role (SecurityOperationsRole)
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::${SECURITY_ACCOUNT_ID}:role/${LAMBDA_ROLE_NAME}"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "aws:PrincipalOrgID": "${YOUR_ORG_ID}"
+                }
+            }
+        }
+    ]
+}
+
+
+S3 Bucket Policy
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowCrossAccountAccess",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::${TARGET_ACCOUNT_ID}:role/SecurityOperationsRole"
+                ]
+            },
+            "Action": [
+                "s3:PutObject",
+                "s3:PutObjectAcl"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${FORENSICS_BUCKET}/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "aws:PrincipalOrgID": "${YOUR_ORG_ID}"
+                }
+            }
+        }
+    ]
+}
+
+SNS Topic Policy
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowCrossAccountPublish",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::${TARGET_ACCOUNT_ID}:role/SecurityOperationsRole"
+                ]
+            },
+            "Action": "sns:Publish",
+            "Resource": "arn:aws:sns:${REGION}:${SECURITY_ACCOUNT_ID}:${TOPIC_NAME}",
+            "Condition": {
+                "StringEquals": {
+                    "aws:PrincipalOrgID": "${YOUR_ORG_ID}"
+                }
+            }
+        }
+    ]
+}
+
+
+Modified Lambda Code for Cross-Account Operations
+def assume_role(account_id, role_name):
+    """Assume role in target account"""
+    sts = boto3.client('sts')
+    assumed_role = sts.assume_role(
+        RoleArn=f'arn:aws:iam::{account_id}:role/{role_name}',
+        RoleSessionName='SecurityOperations'
+    )
+    return assumed_role['Credentials']
+
+def get_client(service, credentials):
+    """Get AWS client for assumed role"""
+    return boto3.client(
+        service,
+        aws_access_key_id=credentials['AccessKeyId'],
+        aws_secret_access_key=credentials['SecretAccessKey'],
+        aws_session_token=credentials['SessionToken']
+    )
+
+def lambda_handler(event, context):
+    try:
+        target_account = event['account_id']
+        
+        # Assume role in target account
+        credentials = assume_role(target_account, 'SecurityOperationsRole')
+        
+        # Initialize clients with assumed role
+        ec2 = get_client('ec2', credentials)
+        ssm = get_client('ssm', credentials)
+        
+        # Rest of your lambda code...
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise
