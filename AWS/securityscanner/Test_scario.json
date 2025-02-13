@@ -1,0 +1,9 @@
+#This is a format for generating Test scanrios for the lambda security scanner:
+{
+  "endpoints": [
+    "https://example.com",
+    "https://test.example.com/login",
+    "https://api.example.com/v1/users"
+  ],
+  "s3_bucket": "your-security-findings-bucket"
+}
