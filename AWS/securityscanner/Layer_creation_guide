@@ -1,4 +1,16 @@
 ##The lambda need an additional layer to oprate that contains the Requests python mudole.
+Current covrage of the scan:
+Security Headers Analysis
+-X-Frame-Options (Prevents clickjacking)
+-X-Content-Type-Options (Prevents MIME-sniffing)
+-Strict-Transport-Security (Enforces HTTPS)
+-Content-Security-Policy (Controls resource loading)
+
+
+SSL/TLS Verification
+-Protocol version check
+-HTTPS enforcement
+
 Lambda Configuration
 Runtime: Python 3.12 (select this from dropdown)
 Memory: 256 MB
