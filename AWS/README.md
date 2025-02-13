@@ -9,6 +9,13 @@ This repository contains AWS security automation tools for incident response, fo
 -Integration guides and prerequisites\
 -Step-by-step implementation instructions
 
+ **Security Scanner**:\
+-Basic Security Analysis: Security headers inspection, SSL/TLS configuration checks, and certificate validation.\
+-Active Testing: SQL injection attempts, Cross-Site Scripting (XSS) detection, and directory traversal testing.\
+-Input Validation: Tests for proper validation of email, phone numbers, and date formats in application inputs.\
+-Results Management: Automated scanning results saved to S3 in JSON format for further analysis and integration.
+
+
 **Forensics & Investigation:**\
 -EC2/ECS forensics preparation guides\
 -Investigation Lambda functions\
