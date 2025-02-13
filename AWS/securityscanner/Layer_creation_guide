@@ -1,0 +1,11 @@
+##The lambda need an additional layer to oprate that contains the Requests python mudole.
+Lambda Configuration
+Runtime: Python 3.12 (select this from dropdown)
+Memory: 256 MB
+Timeout: 1 minute
+
+HowTo_Guide:
+1.On the terminal(Linux synetx):mkdir python.
+2.Than run:pip3 install requests -t .
+3.ZIP the **python** folder
+4.Create new layer in the GUI\CLI and upload the zip content there.
